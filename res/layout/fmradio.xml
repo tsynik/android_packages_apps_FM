@@ -12,7 +12,7 @@
 	<LinearLayout
 		android:id="@+id/presets_layout"
 		android:layout_width="match_parent"
-		android:layout_height="48dp"
+		android:layout_height="64dp"
 		android:background="@drawable/favorite_bg"
 		android:orientation="horizontal">
 		<Button
@@ -46,6 +46,13 @@
 		<Button
 			android:id="@+id/presets_button_5"
 			style="@style/favoriteButtonStyle" />
+		<View
+            android:layout_width="2dp"
+            android:layout_height="match_parent"
+            android:background="@drawable/favorite_line" />
+		<Button
+            android:id="@+id/presets_button_6"
+            style="@style/favoriteButtonStyle" />
 	</LinearLayout>
 	<LinearLayout
 		android:id="@+id/stationinfo_layout"
@@ -80,8 +87,8 @@
 				android:layout_height="match_parent"
 				android:gravity="center"
 				android:text="@string/frequency_string"
-				android:textColor="#FFC3E7AA"
-				android:textSize="30sp" />
+				android:textColor="#ffff003c"
+				android:textSize="78sp" />
 		</LinearLayout>
 		<ImageButton
 			android:id="@+id/btn_onoff"

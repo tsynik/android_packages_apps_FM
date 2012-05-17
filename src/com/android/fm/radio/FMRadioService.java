@@ -16,19 +16,34 @@ import android.hardware.fmradio.FmConfig;
 import android.hardware.fmradio.FmReceiver;
 import android.hardware.fmradio.FmRxEvCallbacksAdaptor;
 import android.hardware.fmradio.FmRxRdsData;
+import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioManager.OnAudioFocusChangeListener;
 import android.media.AudioSystem;
+import android.media.AudioRecord;
+import android.media.AudioTrack;
+import android.media.MediaRecorder;
+import android.os.Environment;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.PowerManager;
+import android.os.Process;
+
 import android.os.RemoteException;
 import android.os.PowerManager.WakeLock;
 import android.util.Log;
 import android.widget.RemoteViews;
 import android.os.SystemProperties;
+
+//import java.io.BufferedReader;
+import java.io.File;
+//import java.io.InputStreamReader;
+import java.io.IOException;
+
+//import java.lang.Process;
+//import java.lang.Runtime;
 
 import java.lang.ref.WeakReference;
 
@@ -74,7 +89,7 @@ public class FMRadioService extends Service {
     /**
      * App name used in log messages
      */
-    private static final String LOGTAG = "FMService";
+    private static final String LOGTAG = "FMRadioService";
 
     private AudioManager mAudioManager;
 
@@ -191,6 +206,11 @@ public class FMRadioService extends Service {
     private static final int IDLE_DELAY = 60000;
 
     /**
+     * MdiaRecorder object
+     */
+    MediaRecorder mRecorder = null;
+
+    /**
      * Default java constructor
      */
     public FMRadioService() {
@@ -295,8 +315,8 @@ public class FMRadioService extends Service {
 
                     if (isFmOn()) {
                         Log.d(LOGTAG, "AudioFocus: FM is on, turning off");
-                        mute();
                         stopFM();
+                        mute();
                     }
                     break;
                 case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
@@ -304,8 +324,8 @@ public class FMRadioService extends Service {
 
                     if(isFmOn()) {
                         Log.d(LOGTAG, "AudioFocus: FM is on, turning off");
-                        mute();
                         stopFM();
+                        mute();
                     }
                     break;
                 case AudioManager.AUDIOFOCUS_GAIN:
@@ -426,8 +446,8 @@ public class FMRadioService extends Service {
                 // This handles the PAUSE action
                 else if(isFmOn() && !isMuted()) {
                     Log.d(LOGTAG, "Pausing FM radio playback");
-                    mute();
                     stopFM();
+                    mute();
 
                     try {
                         if (mCallbacks != null) {
@@ -515,26 +535,191 @@ public class FMRadioService extends Service {
     }
 
     private void startFM(){
-        Log.d(LOGTAG, "In startFM");
-        if (SystemProperties.OMAP_ENHANCEMENT) {
-            Intent fm_intent = new Intent("android.intent.action.FM_PLUG");
-            fm_intent.putExtra("state", 1);
-            context.sendBroadcast(fm_intent);
-        }
-        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_FM, AudioSystem.DEVICE_STATE_AVAILABLE, "");
+//        Log.d(LOGTAG, "In startFM");
+//        if (SystemProperties.OMAP_ENHANCEMENT) {
+//            Intent fm_intent = new Intent("android.intent.action.FM_PLUG");
+//            fm_intent.putExtra("state", 1);
+//            context.sendBroadcast(fm_intent);
+//        }
+//        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_FM, AudioSystem.DEVICE_STATE_AVAILABLE, "");
         lockscreenBroadcast(true,getFreq());
+        
+        // Start Recording
+        //startRecording();
+        SystemProperties.set("media.audio.in.mode", "fm");
+        startStreaming();
+
     }
 
     private void stopFM(){
         Log.d(LOGTAG, "In stopFM");
-        if (SystemProperties.OMAP_ENHANCEMENT) {
-            Intent fm_intent = new Intent("android.intent.action.FM_PLUG");
-            fm_intent.putExtra("state", 0);
-            context.sendBroadcast(fm_intent);
-        }
-        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_FM, AudioSystem.DEVICE_STATE_UNAVAILABLE, "");
+//        if (SystemProperties.OMAP_ENHANCEMENT) {
+//            Intent fm_intent = new Intent("android.intent.action.FM_PLUG");
+//            fm_intent.putExtra("state", 0);
+//            context.sendBroadcast(fm_intent);
+//        }
+//        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_FM, AudioSystem.DEVICE_STATE_UNAVAILABLE, "");
         lockscreenBroadcast(false,0);
+
+        // Stop Recording
+        //stopRecording();
+        SystemProperties.set("media.audio.in.mode", "codec");
+        stopStreaming();
     }
+
+/* --------------------------------------------------------------------------------- */
+
+    public boolean startRecording() {
+        Log.d(LOGTAG, "In startRecording of Recorder");
+        stopRecording();
+        File mSampleFile = null;
+        File sampleDir = Environment.getExternalStorageDirectory();
+        if (!sampleDir.canWrite()) // Workaround for broken sdcard support on
+                                    // the device.
+            sampleDir = new File("/sdcard/sdcard");
+        try {
+            mSampleFile = File
+                    .createTempFile("FMRecording", ".mp4", sampleDir);
+        } catch (IOException e) {
+            /*new AlertDialog.Builder(this)
+              +           .setTitle(R.string.app_name)
+              +           .setMessage(R.string.error_sdcard_access)
+              +           .setPositiveButton(R.string.button_ok, null)
+              +           .setCancelable(false)
+              +           .show();*/
+            Log.e(LOGTAG, "Not able to access SD Card");
+            return false;
+        }
+
+        mRecorder = new MediaRecorder();
+        try {
+        //            mRecorder.setAudioSource(MediaRecorder.AudioSource.FM_RX);
+            mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mRecorder.setAudioSamplingRate(48000);
+            mRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+        } catch (RuntimeException exception) {
+            //setError(UNSUPPORTED_FORMAT);
+            mRecorder.reset();
+            mRecorder.release();
+            mRecorder = null;
+            return false;
+        }
+        mRecorder.setOutputFile(mSampleFile.getAbsolutePath());
+        // Handle IOException
+        try {
+            mRecorder.prepare();
+        } catch (IOException exception) {
+            //setError(INTERNAL_ERROR);
+            mRecorder.reset();
+            mRecorder.release();
+            mRecorder = null;
+            return false;
+        }
+        mRecorder.start();
+        return true;
+    }
+
+    public void stopRecording() {
+        if (mRecorder == null)
+           return;
+
+        mRecorder.stop();
+        mRecorder.reset();
+        mRecorder.release();
+        mRecorder = null;
+        return;
+    }
+    
+    /**
+     * STREAMING IO INTERFACE
+     */
+    public AudioRecord arec;
+    public AudioTrack atrack;
+    public boolean isRecording;
+
+    public void startStreaming() {
+
+        new Thread( new Runnable(){
+        @Override
+        public void run() {
+        // AUDIO PARAMS
+        final int rate = 48000; //22050
+
+        isRecording = true;
+        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+
+        int recbuffer = AudioRecord.getMinBufferSize(rate,
+        AudioFormat.CHANNEL_IN_STEREO,
+        AudioFormat.ENCODING_PCM_16BIT) * 4;
+        int playbuffer = AudioTrack.getMinBufferSize(rate,
+        AudioFormat.CHANNEL_OUT_STEREO,
+        AudioFormat.ENCODING_PCM_16BIT) * 4;
+
+        //final int buffersize = 128000;
+
+        AudioRecord arec = new AudioRecord(
+//                MediaRecorder.AudioSource.FM_RX,
+                MediaRecorder.AudioSource.MIC,
+                rate,
+                AudioFormat.CHANNEL_IN_STEREO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                recbuffer);
+
+        AudioTrack atrack = new AudioTrack(
+                AudioManager.STREAM_MUSIC,
+                rate,
+                AudioFormat.CHANNEL_OUT_STEREO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                playbuffer,
+                AudioTrack.MODE_STREAM);
+
+        atrack.setPlaybackRate(rate);
+
+        byte[] buffer = new byte[recbuffer];
+        arec.startRecording();
+        atrack.play();
+
+        while(isRecording) {
+            arec.read(buffer, 0, recbuffer);
+            atrack.write(buffer, 0, buffer.length);
+        }
+
+        atrack.stop();
+        atrack.release();
+        arec.stop();
+        arec.release();
+        isRecording = false;
+        } // end RUN
+        }).start(); // end THREAD
+    }
+
+    public void stopStreaming() {
+//        arec.stop();
+//        arec.release();
+//        atrack.stop();
+//        atrack.release();
+        isRecording = false;
+        arec=null;
+        atrack=null;
+//        this.stop();
+    }
+
+/*
+    public void getPropExec() {
+        String line = "";
+        try {
+        Process ifc = Runtime.getRuntime().exec("getprop ro.hardware");
+        BufferedReader bis = new BufferedReader(new InputStreamReader(ifc.getInputStream()));
+        line = bis.readLine();
+        } catch (java.io.IOException e) {
+        }
+        ifc.destroy();
+    }
+*/
+
+/* --------------------------------------------------------------------------------- */
+
 
     private void lockscreenBroadcast(boolean on,int freq){
         Intent i = new Intent("com.android.music.metachanged");
@@ -836,7 +1021,9 @@ public class FMRadioService extends Service {
             }
 
             if (bStatus == true) {
+                unMute();
                 startFM();
+                
                 bStatus = mReceiver.registerRdsGroupProcessing(FmReceiver.FM_RX_RDS_GRP_RT_EBL
                         | FmReceiver.FM_RX_RDS_GRP_PS_EBL | FmReceiver.FM_RX_RDS_GRP_AF_EBL
                         | FmReceiver.FM_RX_RDS_GRP_PS_SIMPLE_EBL);
@@ -1115,7 +1302,7 @@ public class FMRadioService extends Service {
                             FmReceiver.FM_RX_DWELL_PERIOD_7S, FmReceiver.FM_RX_SEARCHDIR_UP);
                 }
             } else {
-                /* RDS : Validate PTY value?? */
+                /* RDS : Validate PTY value? */
                 if ((pty > 0) && (pty <= 31)) {
                     bCommandSent = mReceiver
                             .searchStations(FmReceiver.FM_RX_SRCHRDS_MODE_SCAN_PTY,
@@ -1384,7 +1571,7 @@ public class FMRadioService extends Service {
         }
 
         public void FmRxEvDisableReceiver() {
-            Log.d(LOGTAG, "FmRxEvEnableReceiver");
+            Log.d(LOGTAG, "FmRxEvDisableReceiver");
         }
 
         public void FmRxEvConfigReceiver() {

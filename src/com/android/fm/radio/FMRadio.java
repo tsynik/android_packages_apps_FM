@@ -9,7 +9,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
-import android.bluetooth.BluetoothAdapter;
+//import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -75,7 +75,7 @@ public class FMRadio extends Activity {
     private static final int ACTIVITY_RESULT_SETTINGS = 1;
 
     /* Activity Return ResultIdentifiers */
-    private static final int MAX_PRESETS_PER_PAGE = 5;
+    private static final int MAX_PRESETS_PER_PAGE = 6;
 
     /* Station's Audio is Stereo */
     private static final int FMRADIO_UI_STATION_AUDIO_STEREO = 1;
@@ -150,7 +150,7 @@ public class FMRadio extends Activity {
 
     /* 5 Preset Buttons */
     private Button[] mPresetButtons = {
-            null, null, null, null, null
+            null, null, null, null, null, null
     };
     private Context context;
     /* Middle row in the station info layout */
@@ -242,12 +242,12 @@ public class FMRadio extends Activity {
     /* Command that failed (Sycnhronous or Asynchronous) */
     private static int mCommandFailed = 0;
 
-    private boolean mBluetoothEnabled = false;
+//    private boolean mBluetoothEnabled = false;
 
     private boolean mInitialBtState = false;
 
-    private ProgressDialog mBluetoothStartingDialog;
-
+//    private ProgressDialog mBluetoothStartingDialog;
+/*
     private BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -264,7 +264,7 @@ public class FMRadio extends Activity {
             }
         }
     };
-
+*/
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -301,12 +301,13 @@ public class FMRadio extends Activity {
         if (!context.getResources().getBoolean(R.bool.speaker_supported))
             mSpeakerButton.setVisibility(View.INVISIBLE);
 
-        /* 5 Preset Buttons */
+        /* 6 Preset Buttons */
         mPresetButtons[0] = (Button) findViewById(R.id.presets_button_1);
         mPresetButtons[1] = (Button) findViewById(R.id.presets_button_2);
         mPresetButtons[2] = (Button) findViewById(R.id.presets_button_3);
         mPresetButtons[3] = (Button) findViewById(R.id.presets_button_4);
         mPresetButtons[4] = (Button) findViewById(R.id.presets_button_5);
+        mPresetButtons[5] = (Button) findViewById(R.id.presets_button_6);
         for (int nButton = 0; nButton < MAX_PRESETS_PER_PAGE; nButton++) {
             mPresetButtons[nButton].setOnClickListener(mPresetButtonClickListener);
             mPresetButtons[nButton].setOnLongClickListener(mPresetButtonOnLongClickListener);
@@ -326,13 +327,13 @@ public class FMRadio extends Activity {
 
         mTunerView = (TunerView) findViewById(R.id.fm_tuner_view);
         mTunerView.setOnMoveListener(mTunerViewMoveListener);
-
+/*
         if (getResources().getBoolean(R.bool.require_bt)) {
             IntentFilter filter = new IntentFilter();
             filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
             registerReceiver(mIntentReceiver, filter);
         }
-
+*/
         enableRadioOnOffUI(false);
 
         if (false == bindToService(this, osc)) {
@@ -437,14 +438,14 @@ public class FMRadio extends Activity {
 
     private void switchToSpeaker() {
         AudioSystem.setForceUse(AudioSystem.FOR_MEDIA, AudioSystem.FORCE_SPEAKER);
-        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_FM, AudioSystem.DEVICE_STATE_UNAVAILABLE, "");
-        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_FM, AudioSystem.DEVICE_STATE_AVAILABLE, "");
+        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_DEFAULT, AudioSystem.DEVICE_STATE_UNAVAILABLE, "");
+        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_DEFAULT, AudioSystem.DEVICE_STATE_AVAILABLE, "");
     }
 
     private void switchToHeadset() {
         AudioSystem.setForceUse(AudioSystem.FOR_MEDIA, AudioSystem.FORCE_NONE);
-        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_FM, AudioSystem.DEVICE_STATE_UNAVAILABLE, "");
-        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_FM, AudioSystem.DEVICE_STATE_AVAILABLE, "");
+        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_DEFAULT, AudioSystem.DEVICE_STATE_UNAVAILABLE, "");
+        AudioSystem.setDeviceConnectionState(AudioSystem.DEVICE_OUT_DEFAULT, AudioSystem.DEVICE_STATE_AVAILABLE, "");
     }
 
     @Override
@@ -452,10 +453,10 @@ public class FMRadio extends Activity {
         endSleepTimer();
         unbindFromService(this);
         mService = null;
-        if (mIntentReceiver != null && getResources().getBoolean(R.bool.require_bt)) {
-            unregisterReceiver(mIntentReceiver);
-            mIntentReceiver = null;
-        }
+//        if (mIntentReceiver != null && getResources().getBoolean(R.bool.require_bt)) {
+//            unregisterReceiver(mIntentReceiver);
+//            mIntentReceiver = null;
+//        }
         Log.d(LOGTAG, "onDestroy: unbindFromService completed");
         super.onDestroy();
     }
@@ -628,6 +629,8 @@ public class FMRadio extends Activity {
             }
         }
         Log.e(LOGTAG, "isWiredHeadsetAvailable: " + bAvailable);
+        // HACK
+        bAvailable = true;
         return bAvailable;
     }
 
@@ -644,6 +647,8 @@ public class FMRadio extends Activity {
             }
         }
         Log.e(LOGTAG, "isAntennaAvailable: " + bAvailable);
+        // HACK
+        bAvailable = true;
         return bAvailable;
     }
 
@@ -795,11 +800,11 @@ public class FMRadio extends Activity {
                 disableRadio();
             }
             else {
-		if (context.getResources().getBoolean(R.bool.require_bt)) {
-		    asyncCheckAndEnableRadio();
-		} else {
+//		if (context.getResources().getBoolean(R.bool.require_bt)) {
+//		    asyncCheckAndEnableRadio();
+//		} else {
 		    enableRadio();
-		}
+//		}
             }
             setTurnOnOffButtonImage();
         }
@@ -839,12 +844,13 @@ public class FMRadio extends Activity {
         Log.d(LOGTAG, "asyncCheckAndEnableRadio");
 
         // Save the initial state of the BT adapter
-        mBluetoothEnabled = BluetoothAdapter.getDefaultAdapter().isEnabled();
-        mInitialBtState  = mBluetoothEnabled;
+//        mBluetoothEnabled = BluetoothAdapter.getDefaultAdapter().isEnabled();
+//        mInitialBtState  = mBluetoothEnabled;
 
-        if (mBluetoothEnabled) {
+//        if (mBluetoothEnabled) {
             enableRadio();
-        }
+//        }
+/*
         else {
             // Enable the BT adapter
             BluetoothAdapter.getDefaultAdapter().enable();
@@ -895,6 +901,7 @@ public class FMRadio extends Activity {
             };
             task.execute();
         }
+*/
     }
 
     private void enableRadio() {
@@ -909,8 +916,8 @@ public class FMRadio extends Activity {
                 boolean radioOn = mService.isFmOn();
 
                 // reset volume to avoid a bug that volume will be MAX
-                int vol = AudioSystem.getStreamVolumeIndex(AudioSystem.STREAM_FM);
-                AudioSystem.setStreamVolumeIndex(AudioSystem.STREAM_FM, vol);
+                //int vol = AudioSystem.getStreamVolumeIndex(AudioSystem.STREAM_FM);
+                //AudioSystem.setStreamVolumeIndex(AudioSystem.STREAM_FM, vol);
 
                 if (!isPhoneInCall()) {
                     mService.unMute();
@@ -990,15 +997,15 @@ public class FMRadio extends Activity {
                 }
 
                 // Toggle BT on/off depending on value in preferences
-		if (context.getResources().getBoolean(R.bool.require_bt))
-		    toggleRadioOffBluetoothBehaviour();
+//		if (context.getResources().getBoolean(R.bool.require_bt))
+//		    toggleRadioOffBluetoothBehaviour();
             }
             catch (RemoteException e) {
                 Log.e(LOGTAG, "RemoteException in disableRadio", e);
             }
         }
     }
-
+/*
     private void toggleRadioOffBluetoothBehaviour() {
         Log.d(LOGTAG, "toggleRadioOffBluetoothBehavior");
 
@@ -1035,7 +1042,7 @@ public class FMRadio extends Activity {
             }
         }
     }
-
+*/
     public static void fmConfigure() {
         boolean bStatus = false;
         if (mService != null) {
@@ -1583,9 +1590,9 @@ public class FMRadio extends Activity {
             /* Update UI to FM Off State */
             enableRadioOnOffUI(false);
 
-            if (mPrefs.getHeadsetDcBehaviour()) {
-                toggleRadioOffBluetoothBehaviour();
-            }
+//            if (mPrefs.getHeadsetDcBehaviour()) {
+//                toggleRadioOffBluetoothBehaviour();
+//            }
         }
     };
 
@@ -1900,11 +1907,11 @@ public class FMRadio extends Activity {
                 try {
                     mService.registerCallbacks(mServiceCallbacks);
 
-		    if (context.getResources().getBoolean(R.bool.require_bt)) {
-			asyncCheckAndEnableRadio();
-		    } else {
+//		    if (context.getResources().getBoolean(R.bool.require_bt)) {
+//			asyncCheckAndEnableRadio();
+//		    } else {
 			enableRadio();
-		    }
+//		    }
 
                 } catch (RemoteException e) {
                     e.printStackTrace();

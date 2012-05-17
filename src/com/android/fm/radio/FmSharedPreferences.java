@@ -475,7 +475,7 @@ public class FmSharedPreferences {
         setEmphasis(0);
         setRdsStd(0);
         mFMConfiguration.setLowerLimit(87500);
-        mFMConfiguration.setUpperLimit(107900);
+        mFMConfiguration.setUpperLimit(108000);
     }
 
     public static void removeStationList(int listIndex) {
@@ -641,7 +641,8 @@ public class FmSharedPreferences {
     }
 
     public static void setEmphasis(int emph) {
-        if ((emph >= FmReceiver.FM_DE_EMP75) && (emph <= FmReceiver.FM_DE_EMP50)) {
+//        if ((emph >= FmReceiver.FM_DE_EMP75) && (emph <= FmReceiver.FM_DE_EMP50)) {
+        if ((emph >= FmReceiver.FM_DE_EMP75) && (emph <= FmReceiver.FM_DE_EMPDF)) {
             mFMConfiguration.setEmphasis(emph);
         }
     }
@@ -831,7 +832,10 @@ public class FmSharedPreferences {
             }
             case REGIONAL_BAND_RUSSIA: {// - RUSSIA 87500 TO 108000 IN 100 KHZ
                                         // STEPS
-
+                mFMConfiguration.setLowerLimit(87500);
+                mFMConfiguration.setUpperLimit(108000);
+                mFMConfiguration.setChSpacing(FmReceiver.FM_CHSPACE_50_KHZ);
+                mFMConfiguration.setEmphasis(FmReceiver.FM_DE_EMPDF);
                 break;
             }
             case REGIONAL_BAND_SINGAPORE: {// - SINGAPORE 88000 TO 108000 IN 100
